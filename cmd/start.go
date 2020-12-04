@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"bytes"
 	"flag"
-	"io/ioutil"
-	"os"
+	"strings"
 
 	"github.com/go-redis/redis"
 	"github.com/lucbarr/leaderboard-manager/api"
@@ -95,7 +93,8 @@ func configure() error {
 
 func configureRedis(cfg *viper.Viper) error {
 	redisClient = redis.NewClient(&redis.Options{
-		Addr: cfg.GetString("redis.url"),
+		Addr:     cfg.GetString("redis.host"),
+		Password: cfg.GetString("redis.password"),
 	})
 
 	logger.Debug("connected to redis")
@@ -128,20 +127,16 @@ func readFlags() {
 
 func readConfigs(configPath string) error {
 	cfg := viper.New()
-
-	file, err := os.Open(configPath)
-	if err != nil {
-		return err
-	}
-
-	cfgData, err := ioutil.ReadAll(file)
-	if err != nil {
-		return err
-	}
-
+	cfg.SetConfigFile(configPath)
 	cfg.SetConfigType("yaml")
 	cfg.SetEnvPrefix(appName)
-	cfg.ReadConfig(bytes.NewBuffer(cfgData))
+	cfg.AddConfigPath(".")
+	cfg.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	cfg.AutomaticEnv()
+
+	if err := cfg.ReadInConfig(); err != nil {
+		return err
+	}
 
 	config = cfg
 
