@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/lucbarr/leaderboard-manager/handler"
@@ -22,8 +23,10 @@ func (b *basicAuthHandler) BasicAuth(next http.Handler) http.Handler {
 		user, pass, ok := r.BasicAuth()
 
 		if !ok || !b.isUserValid(user, pass) {
-			handler.WriteJSONResponse(w, &handler.BaseResponse{Code: "LB-001", Msg: "Unauthorized"})
+			log.Println("user trying to authenticate:", user, pass)
 			w.WriteHeader(http.StatusUnauthorized)
+			handler.WriteJSONResponse(w, &handler.BaseResponse{Code: "LB-001", Msg: "Unauthorized"})
+			return
 		}
 
 		next.ServeHTTP(w, r)
