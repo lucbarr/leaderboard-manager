@@ -33,15 +33,23 @@ func (l *leaderboard) buildLeaderboardKey(leaderboardID string) string {
 	return fmt.Sprintf("%s::%s", l.config.GetString("redis.prefix"), leaderboardID)
 }
 
+const setScoreScript string = `
+local s = redis.call('ZSCORE', KEYS[1], ARGV[2])
+if not s or tonumber(s) < tonumber(ARGV[1]) then
+  redis.call('ZADD', KEYS[1], ARGV[1], ARGV[2])
+end
+`
+
 func (l *leaderboard) SetScore(ctx context.Context, playerID, leaderboardID string, score int) error {
 	redisClient := l.redisClient.WithContext(ctx)
 
 	leaderboardKey := l.buildLeaderboardKey(leaderboardID)
 
-	cmd := redisClient.ZAdd(leaderboardKey, redis.Z{
-		Score:  float64(score),
-		Member: playerID,
-	})
+	cmd := redisClient.Eval(setScoreScript, []string{leaderboardKey}, score, playerID)
+
+	if cmd.Err() == redis.Nil {
+		return nil
+	}
 
 	return cmd.Err()
 }

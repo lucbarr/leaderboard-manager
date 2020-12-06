@@ -50,12 +50,14 @@ func (h *Handler) setScore(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	err := h.bll.SetScore(ctx, playerID, leaderboardID, score)
 	if err != nil {
+		h.logger.WithError(err).Error("Failed to set score")
 		handler.WriteJSONResponse(w, &handler.BaseResponse{Code: handler.CodeInternalError, Msg: "error"})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	handler.WriteJSONResponse(w, &handler.BaseResponse{Msg: "success"})
+	w.WriteHeader(http.StatusOK)
 }
 
 type GetTopScores struct {
